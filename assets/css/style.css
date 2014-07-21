@@ -1,0 +1,52 @@
+textarea {
+	resize: none;
+}
+#content.hero-unit {
+    background-color: #FFFFFF;
+    border: 1px solid #CCCCCC;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.075) inset;
+    font-size: 12px;
+    height: 240px;
+    padding: 5px;
+    overflow: auto;
+	margin: 0;
+}
+#content p {
+    margin: 0;
+    line-height: 20px;
+}
+#announcement p:first-child {
+    color: #468847;
+    margin: 0 0 20px;
+}
+#field {
+    height: 110px;
+}
+.online-user {
+	background-color: #FFFFFF;
+    border: 1px solid #DDDDDD;
+    border-radius: 4px 4px 4px 4px;
+    height: 250px;
+	overflow: auto;
+}
+.online-user p.label.btn-block {
+	border-radius: 0 0 0 0;
+    margin: 2px 0;
+    padding-left: 5px;
+}
+.control-label {
+	margin-right: 5px;
+}
+.text-muted {
+	color: #999999;
+}
+.text-muted, .text-info {
+    font-weight: bold;
+}
+.user-panel ul li.active {
+	margin-left: 0;
+}
+.text-muted.normal {
+  font-weight: normal;
+  font-size: 10px;
+}

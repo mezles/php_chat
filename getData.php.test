@@ -1,0 +1,137 @@
+<?php
+
+if ( isset($_REQUEST['action']) && !empty($_REQUEST['action']) ) {
+	if ( function_exists( $_REQUEST['action'] ) ) {
+		$func = $_REQUEST['action'];
+		$func();
+	}
+}
+
+function chat_content() {
+	if ( !isset($_SESSION) ) {
+		session_start();
+	}
+	
+	$filename = dirname( __FILE__ ) . '/db.txt';
+	
+	if ( $_GET['msg'] && !empty( $_GET['msg'] ) ) {
+		$message = file_get_contents( $filename );
+		$message .= "<p><span class='text-muted'>" . $_SESSION['user'] . ": </span>" 
+				. strip_tags( $_GET['msg'], '<a>') . "</p>" . PHP_EOL;
+		file_put_contents( $filename, $message );
+	}
+	$lastmodif = isset( $_GET['timestamp'] ) ? $_GET['timestamp'] : 0;
+	$currentmodif = filemtime( $filename );
+	
+	while( $currentmodif <= $lastmodif ):
+		usleep( 10000);
+		clearstatcache();
+		$currentmodif = filemtime( $filename );
+	endwhile;
+	
+	$db_contents = explode( PHP_EOL, file_get_contents( $filename ) );
+	$db_content = "";
+	if ( is_array( $db_contents ) ) :
+	foreach( $db_contents as $content ):
+		$db_content .= stripslashes( $content );
+	endforeach;
+	else :
+		$db_content = stripslashes( $content );
+	endif;
+	
+	$response = array();
+	$response['msg'] = ($db_content == "") ? "empty" : $db_content;
+	$response['timestamp'] = $currentmodif;
+	echo json_encode( $response );
+	die();
+}
+
+function login() {
+	if ( !isset($_SESSION) ) {
+		session_start();
+	}
+	
+	if ( $_POST['nickname'] && isset($_POST['nickname']) ) {
+		
+		$filename = dirname( __FILE__ ) . '/online.txt';
+		
+		$users = json_decode( file_get_contents( $filename ) );
+		if ( !is_null($users) ) {
+			array_push( $users, $_POST['nickname'] );
+		} else {
+			$users = array();
+			array_push( $users, $_POST['nickname'] );
+		}
+		
+		$user = json_encode(  $users );
+		file_put_contents( $filename, $user );
+		$_SESSION['user'] = $_POST['nickname'];
+	
+	}
+	
+	$response = array();
+	$response['msg'] = 'ok';
+	
+	echo json_encode($response);
+	die();
+}
+
+function whosonline() {	
+	$response = array();
+	
+	if ( $_GET['action'] && !empty( $_GET['action'] ) ) {
+	
+		$filename = dirname( __FILE__ ) . '/online.txt';
+		
+		$lastmodif = isset( $_GET['timestamp'] ) ? $_GET['timestamp'] : 0;
+		$currentmodif = filemtime( $filename );
+		
+		while( $currentmodif <= $lastmodif ):
+			usleep( 10000);
+			clearstatcache();
+			$currentmodif = filemtime( $filename );
+		endwhile;
+	
+		$users = json_decode( file_get_contents( $filename ) );
+		if ( !is_null($users) ) {
+			$response['online'] = $users;
+		} else {
+			$response['online'] = array();
+		}	
+	}
+	
+	$response['timestamp'] = $currentmodif;
+	echo json_encode( $response );
+	die();
+	
+}
+
+function logout() {
+	if ( !isset($_SESSION) ) {
+		session_start();
+	}
+	
+	$response = array();	
+	$new_online = array();
+	
+	$filename = dirname( __FILE__ ) . '/online.txt';
+		
+	$users = json_decode( file_get_contents( $filename ) );
+	if ( !is_null($users) ) {
+		foreach( $users as $key => $value ) {
+			if ( $value != $_SESSION['user'] ) {
+				$new_online[] = $value;
+			}
+		}
+	}
+	$user = json_encode(  $new_online );
+	file_put_contents( $filename, $user );
+		
+	unset($_SESSION['user']);
+	session_destroy();
+	
+	$response['msg'] = "ok";
+	echo json_encode( $response );
+	die();
+	
+}

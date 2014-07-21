@@ -1,0 +1,257 @@
+<?php
+	session_start();
+	if ( !isset($_SESSION['user']) ) {
+		// header('Location: login.php');
+	}
+?>
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>PHP Long Pull</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- Bootstrap -->
+        <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <link href="style.css" rel="stylesheet">
+    </head>
+    
+    <body>
+		<form id="sendmsg" method="POST">
+        <div class="well span12">
+            <div class="row">
+                <div class="span4">
+					<div class="dropdown pull-right">
+						<a class="dropdown-toggle" data-toggle="dropdown" href="#">Action</a>
+						<ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
+							<li><a id="logout" href="#">Logout</a></li>
+						</ul>
+					</div>
+                    <label>Nick Name <span class="label label-success"></span></label>
+                    <input type="text" class="span4" id="name" placeholder="Your Nick Name" required />
+                    <label>Message</label>
+                    <textarea class="span4" id="field" placeholder="Your Message" required></textarea>
+                    <button type="submit" class="btn btn-primary btn-block">Send</button>
+                </div>
+                <div class="span5">
+                    <label>Message Dashboard</label>
+                    <div name="message" id="message" class="hero-unit">
+						<div id="announcement"></div>
+						<div id="msgs"></div>
+					</div>
+                </div>
+				<div class="span3">
+					<label>Who is online?</label>
+					<div class="online-user"></div>
+				</div>
+            </div>
+        </div>
+		</form>
+		
+		<div class="modal fade" id="myModal">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h4 class="modal-title">Hi, who are you?</h4>
+					</div>
+					<div class="modal-body">
+						<form class="form-horizontal">
+							<div class="form-group">
+								<label for="nickname" class="col-lg-2 control-label">Nickname</label>
+								<div class="col-lg-10">
+									<input type="text" class="form-control" id="nickname" placeholder="Nickname">
+								</div>
+							</div>
+						</form>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-primary" id="save_nickname" data-loading-text="Saving..." autocomplete="off">Save changes</button>
+					</div>
+				</div><!-- /.modal-content -->
+			</div><!-- /.modal-dialog -->
+		</div><!-- /.modal -->
+
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+		<script type="text/javascript">
+			var timestamp = null;
+			function waitMsg( reload, name, msg ) {
+				reload = reload || false;
+				name = name || null;
+				msg = msg || null;
+				
+				$.ajax({
+					url: "getData.php",
+					type: "GET",
+					dataType: "json",
+					async: true,
+					cache: false,
+					data: {
+						"timestamp"	: timestamp,
+						"name"	: name,
+						"msg"	: msg,
+						'action'	: 'chat_content'
+					},
+					success: function( response ) {
+						if ( response.msg != "" ) {
+							if ( reload ) {
+								$("#announcement").html('<p><strong>Welcome to chat ' + $('#name').val() + '</strong></p>');
+							}
+							
+							$("#msgs").html( unescape(response.msg) );
+							
+							if ( reload ) {
+								setTimeout(function() {
+									$("#content").animate({ scrollTop: $("#content").prop("scrollHeight") - $("#content").height() }, 100);
+								}, 2000);
+								
+							} else {
+								$("#content").animate({ scrollTop: $("#content").prop("scrollHeight") - $("#content").height() }, 100);
+							}
+								
+							fix_href();
+							/* get_online(); */
+						}
+						timestamp = response.timestamp;
+						setTimeout('waitMsg()', 1000);
+					},
+					error: function( XMLHttpRequest, textStatus, errorThrown ) {
+						console.log( "error: " + textStatus + " (" + errorThrown + ")" );
+						setTimeout('waitMsg()', 1000);
+					}
+				});
+			}
+			
+			function fix_href() {
+				$("#msgs").find("a:not([href^='http://'], [href^='https://'])").each(function() {
+					$(this).attr("href", "http://" + $(this).attr("href") );
+				});
+			}
+			
+			function login() {
+				var _this = $(this)
+				,	_nickname = $("#nickname").val();
+				
+				if ( $.trim( _nickname ) == "" ) {
+					$(".modal-body").prepend(
+						"<div class=\"alert alert-error\">" + 
+						"<strong>Oh crap!</strong>  You should have a name." +
+						"</div>"
+					);
+				} else {
+					$.ajax({
+						url: "getData.php",
+						type: "POST",
+						dataType: "json",
+						async: true,
+						cache: false,
+						data: {
+							"nickname"	: _nickname,
+							'action'	: 'login'
+						},
+						beforeSend: function() {
+							$(".alert-error").remove();
+							_this.button("loading");
+						},
+						success: function() {
+							_this.button("reset");
+							$('#myModal').modal('hide');
+							$("#nickname").val("");
+							$("#name").addClass("hide").val( _nickname );
+							$(".label-success").text( _nickname );
+							$("#message").attr("id", "content");
+							waitMsg( true, _nickname );
+						}
+					});
+					
+				}
+			}
+			
+			function reset() {
+				$('#myModal').modal('hide');
+				$("#nickname").val("");
+				$("#name").addClass("hide").val( "<?php echo $_SESSION['user']; ?>" );
+				$(".label-success").text( "<?php echo $_SESSION['user']; ?>" );
+				$("#message").attr("id", "content");
+				waitMsg( true, "<?php echo $_SESSION['user']; ?>" );
+			}
+			
+			function get_online() {
+				$.ajax({
+					url: "getData.php",
+					type: "GET",
+					dataType: "json",
+					async: true,
+					cache: false,
+					data: {
+						"timestamp" : timestamp,
+						"action"	: "whosonline"
+					},
+					success: function( response ) {
+						var _online = [];
+						if ( $.isArray( response.online ) ) {
+							$.each( response.online, function( i, val ) {
+								_online[i] = "<p class='label label-success btn-block'>" + val + "</p>";
+							});
+						}
+						
+						$(".online-user").html( _online.join("") );
+						
+						timestamp = response.timestamp;
+						setTimeout('get_online()', 1000);
+					},
+					error: function( XMLHttpRequest, textStatus, errorThrown ) {
+						console.log( "error: " + textStatus + " (" + errorThrown + ")" );
+						setTimeout('get_online()', 1000);
+					}
+				});
+			}
+			
+			function logout() {
+				$.ajax({
+					url: "getData.php",
+					type: "GET",
+					dataType: "json",
+					async: true,
+					cache: false,
+					data: {
+						'action'	: 'logout'
+					},
+					success: function( response ) {
+						window.location.reload();
+					}
+				});
+			}
+			
+			$(document).ready(function() {
+				<?php if( !isset( $_SESSION['user'] ) ): ?>
+				$('#myModal').modal('show');
+				<?php else: ?>
+				$("#nickname").val("<?php echo $_SESSION['user']; ?>");
+				reset();
+				get_online();
+				<?php endif; ?>
+				
+				$("form#sendmsg").submit(function(e) {
+					e.preventDefault();
+					
+					var _name = $("#name").val()
+					,	_msg = $("#field").val();
+					
+					$("#field").val("");
+					$("#message").attr("id", "content");
+					waitMsg( true, _name, _msg );
+					
+				});
+				
+				$("#save_nickname").click(function() {
+					login();
+					get_online();
+				});
+				
+				$("#logout").click(function() {
+					logout();
+				});
+			});
+		</script>
+    </body>
+    
+</html>
